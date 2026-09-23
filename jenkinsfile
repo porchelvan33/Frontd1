@@ -98,7 +98,7 @@ pipeline {
                                 ${scannerHome}/bin/sonar-scanner \
                                 -Dsonar.projectKey=frontd1-frontend \
                                 -Dsonar.projectName=Frontd1 Frontend \
-                                -Dsonar.sources=src \
+                                -Dsonar.sources=. \
                                 -Dsonar.exclusions=node_modules/**,dist/**,build/**
                             """
                         }
