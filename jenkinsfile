@@ -97,7 +97,7 @@ pipeline {
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
                                 -Dsonar.projectKey=frontd1-frontend \
-                                -Dsonar.projectName=Frontd1 Frontend \
+                                -Dsonar.projectName=Frontd1 \
                                 -Dsonar.sources=. \
                                 -Dsonar.exclusions=node_modules/**,dist/**,build/**
                             """
