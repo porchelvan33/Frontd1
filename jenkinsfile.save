@@ -1,0 +1,270 @@
+pipeline {
+
+    agent any
+
+    tools {
+        nodejs 'NodeJS'
+    }
+
+    environment {
+        AWS_DEFAULT_REGION = 'ap-south-1'
+        AWS_REGION = 'ap-south-1'
+
+        S3_BUCKET = 'frontd1-frontend-porchelvan'
+
+        // Replace this with your actual CloudFront Distribution ID
+        CLOUDFRONT_DISTRIBUTION_ID = 'E2YUXO4I47OT3F'
+
+        SONAR_PROJECT_KEY = 'frontd1-frontend'
+    }
+
+    stages {
+
+      
+        // 1. Checkout source code from GitHub
+        
+        stage('Checkout') {
+            steps {
+                echo 'Cloning frontend repository...'
+
+                git branch: 'main',
+                    url: 'https://github.com/porchelvan33/Frontd1.git'
+            }
+        }
+
+
+        // ==========================================
+        // 2. Verify environment
+        // ==========================================
+        stage('Verify Environment') {
+            steps {
+                sh '''
+                    echo "=============================="
+                    echo "Node Version"
+                    echo "=============================="
+                    node --version
+
+                    echo "=============================="
+                    echo "NPM Version"
+                    echo "=============================="
+                    npm --version
+
+                    echo "=============================="
+                    echo "AWS CLI Version"
+                    echo "=============================="
+                    aws --version
+
+                    echo "=============================="
+                    echo "Project Files"
+                    echo "=============================="
+                    ls -la
+                    ls -la frontend
+                '''
+            }
+        }
+
+
+        // ==========================================
+        // 3. Install dependencies
+        // ==========================================
+        stage('Install Dependencies') {
+            steps {
+                dir('frontend') {
+
+                    echo 'Installing npm dependencies...'
+
+                    sh '''
+                        npm ci
+                    '''
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 4. SonarQube Analysis
+        // ==========================================
+        stage('SonarQube Analysis') {
+            steps {
+                dir('frontend') {
+
+                    withSonarQubeEnv('SonarQube') {
+
+                        script {
+
+                            def scannerHome = tool 'SonarScanner'
+
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=frontd1-frontend \
+                                -Dsonar.projectName=Frontd1 \
+                                -Dsonar.sources=. \
+                                -Dsonar.exclusions=node_modules/**,dist/**,build/**
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 5. SonarQube Quality Gate
+        // ==========================================
+        stage('Quality Gate') {
+            steps {
+
+                timeout(time: 10, unit: 'MINUTES') {
+
+                    waitForQualityGate abortPipeline: true
+
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 6. Build frontend
+        // ==========================================
+        stage('Build Frontend') {
+            steps {
+                dir('frontend') {
+
+                    echo 'Building frontend...'
+
+                    sh '''
+                        npm run build
+                    '''
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 7. Check build output
+        // ==========================================
+        stage('Verify Build') {
+            steps {
+                dir('frontend') {
+
+                    sh '''
+                        echo "Build output:"
+                        ls -la dist
+
+                        test -f dist/index.html
+                    '''
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 8. Test AWS Authentication
+        // ==========================================
+        stage('AWS Authentication') {
+            steps {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+
+                    sh '''
+                        echo "Checking AWS authentication..."
+
+                        aws sts get-caller-identity \
+                            --region $AWS_REGION
+                    '''
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 9. Deploy frontend to S3
+        // ==========================================
+        stage('Deploy to S3') {
+            steps {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+
+                    dir('frontend') {
+
+                        sh '''
+                            echo "Deploying frontend to S3..."
+
+                            aws s3 sync dist/ \
+                                s3://$S3_BUCKET/ \
+                                --delete \
+                                --region $AWS_REGION
+
+                            echo "S3 deployment completed."
+                        '''
+                    }
+                }
+            }
+        }
+
+
+        // ==========================================
+        // 10. CloudFront cache invalidation
+        // ==========================================
+        stage('CloudFront Invalidation') {
+            steps {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+
+                    sh '''
+                        echo "Creating CloudFront invalidation..."
+
+                        aws cloudfront create-invalidation \
+                            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+                            --paths "/*"
+
+                        echo "CloudFront invalidation submitted."
+                    '''
+                }
+            }
+        }
+    }
+
+
+    // ==========================================
+    // Pipeline result
+    // ==========================================
+    post {
+
+        success {
+            echo '=========================================='
+            echo 'DEPLOYMENT SUCCESSFUL'
+            echo 'Frontend deployed to S3 and CloudFront.'
+            echo '=========================================='
+        }
+
+        failure {
+            echo '=========================================='
+            echo 'DEPLOYMENT FAILED'
+            echo 'Check the failed Jenkins stage.'
+            echo '=========================================='
+        }
+
+        always {
+            echo 'Pipeline execution completed.'
+        }
+    }
+}
