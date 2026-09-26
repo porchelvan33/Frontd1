@@ -13,7 +13,7 @@ services:
       - smart-network
 
   auth-service:
-    build: ./auth-service_1784011000189
+    build: ./backend/auth-service_1784011000189
     container_name: auth-service
     ports:
       - "5001:5001"
@@ -27,7 +27,7 @@ services:
       - smart-network
 
   task-service:
-    build: ./task-service
+    build: ./backend/task-service
     container_name: task-service
     ports:
       - "5002:5002"
@@ -41,7 +41,7 @@ services:
       - smart-network
 
   notification-service:
-    build: ./notification-service
+    build: ./backend/notification-service
     container_name: notification-service
     ports:
       - "5003:5003"
@@ -55,7 +55,7 @@ services:
       - smart-network
 
   report-service:
-    build: ./report-service
+    build: ./backend/report-service
     container_name: report-service
     ports:
       - "5004:5004"
@@ -69,7 +69,7 @@ services:
       - smart-network
 
   api-gateway:
-    build: ./api-gateway_1784010924579
+    build: ./backend/api-gateway_1784010924579
     container_name: api-gateway
     ports:
       - "5000:5000"
