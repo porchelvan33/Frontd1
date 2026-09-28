@@ -133,27 +133,7 @@ pipeline {
                 '''
             }
         }
-        stage('Push Backend Images') {
-            steps {
-                sh '''
-                    docker push $DOCKERHUB_USER/frontd1-api-gateway:${BUILD_NUMBER}
-                    docker push $DOCKERHUB_USER/frontd1-api-gateway:latest
-
-                    docker push $DOCKERHUB_USER/frontd1-auth-service:${BUILD_NUMBER}
-                    docker push $DOCKERHUB_USER/frontd1-auth-service:latest
-
-                    docker push $DOCKERHUB_USER/frontd1-task-service:${BUILD_NUMBER}
-                    docker push $DOCKERHUB_USER/frontd1-task-service:latest
-
-                    docker push $DOCKERHUB_USER/frontd1-notification-service:${BUILD_NUMBER}
-                    docker push $DOCKERHUB_USER/frontd1-notification-service:latest
-
-                    docker push $DOCKERHUB_USER/frontd1-report-service:${BUILD_NUMBER}
-                    docker push $DOCKERHUB_USER/frontd1-report-service:latest
-                '''
-            }
-        }
-
+       
         
 
         /* =========================================
