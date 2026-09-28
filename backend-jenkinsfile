@@ -82,7 +82,22 @@ pipeline {
                     '''
                 }
             }
-        }
+        }  
+        stage('Check Project Structure') {
+                steps {
+                   sh '''
+                      echo "Current directory:"
+                       pwd
+
+                       echo "Workspace files:"
+                       ls -la
+
+                       echo "Directory structure:"
+                       find . -maxdepth 3 -type f -name Dockerfile -print
+                    '''
+                 }
+             }
+
 
         /* =========================================
            BUILD BACKEND IMAGES
