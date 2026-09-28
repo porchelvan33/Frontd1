@@ -109,27 +109,27 @@ pipeline {
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-api-gateway:${BUILD_NUMBER} \
                     -t $DOCKERHUB_USER/frontd1-api-gateway:latest \
-                    backend/api-gateway
+                    ./backend/api-gateway
 
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-auth-service:${BUILD_NUMBER} \
                     -t $DOCKERHUB_USER/frontd1-auth-service:latest \
-                    backend/auth-service
+                    ./backend/auth-service
 
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-task-service:${BUILD_NUMBER} \
                     -t $DOCKERHUB_USER/frontd1-task-service:latest \
-                    backend/task-service
+                    ./backend/task-service
 
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-notification-service:${BUILD_NUMBER} \
                     -t $DOCKERHUB_USER/frontd1-notification-service:latest \
-                    backend/notification-service
+                    ./backend/notification-service
 
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-report-service:${BUILD_NUMBER} \
                     -t $DOCKERHUB_USER/frontd1-report-service:latest \
-                    backend/report-service
+                    ./backend/report-service
                 '''
             }
         }
