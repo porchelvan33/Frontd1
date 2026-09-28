@@ -109,12 +109,12 @@ pipeline {
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-api-gateway:${BUILD_NUMBER} \
                     -t $DOCKERHUB_USER/frontd1-api-gateway:latest \
-                    backend/api-gateway
+                    backend/api-gateway_1784010924579
 
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-auth-service:${BUILD_NUMBER} \
                     -t $DOCKERHUB_USER/frontd1-auth-service:latest \
-                    backend/auth-service
+                    backend/auth-service_1784011000189
 
                     docker build \
                     -t $DOCKERHUB_USER/frontd1-task-service:${BUILD_NUMBER} \
