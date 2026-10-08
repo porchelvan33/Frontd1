@@ -97,7 +97,6 @@ pipeline {
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
                                 -Dsonar.projectKey=Frontded \
-                                
                                 -Dsonar.sources=. \
                                 -Dsonar.exclusions=node_modules/**,dist/**
                             """
