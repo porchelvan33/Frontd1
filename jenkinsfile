@@ -7,15 +7,15 @@ pipeline {
     }
 
     environment {
-        AWS_DEFAULT_REGION = 'ap-south-1'
-        AWS_REGION = 'ap-south-1'
+        AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_REGION = 'us-east-1'
 
-        S3_BUCKET = 'frontd1-frontend-porchelvan'
+        S3_BUCKET = 'frontd1-deployed23'
 
         // Replace this with your actual CloudFront Distribution ID
-        CLOUDFRONT_DISTRIBUTION_ID = 'E2YUXO4I47OT3F'
+        CLOUDFRONT_DISTRIBUTION_ID = 'E1N7MBMPXVI1WQ'
 
-        SONAR_PROJECT_KEY = 'frontd1-frontend'
+        SONAR_PROJECT_KEY = 'Frontded'
     }
 
     stages {
@@ -96,8 +96,8 @@ pipeline {
 
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=frontd1-frontend \
-                                -Dsonar.projectName=Frontd1 \
+                                -Dsonar.projectKey=Frontded \
+                                
                                 -Dsonar.sources=. \
                                 -Dsonar.exclusions=node_modules/**,dist/**,build/**
                             """
