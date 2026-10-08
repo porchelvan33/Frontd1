@@ -99,7 +99,7 @@ pipeline {
                                 -Dsonar.projectKey=Frontded \
                                 
                                 -Dsonar.sources=. \
-                                -Dsonar.exclusions=node_modules/**,dist/**,build/**
+                                -Dsonar.exclusions=node_modules/**,dist/**
                             """
                         }
                     }
