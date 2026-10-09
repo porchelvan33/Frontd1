@@ -1,0 +1,151 @@
+pipeline {
+    agent any
+
+    environment {
+        NAMESPACE = 'smart-task'
+
+        HARBOR = '172.31.45.246:30002'
+        PROJECT = 'backend'
+
+        S3_BUCKET = 'frontd1-frontend-porchelvan'
+        CLOUDFRONT_ID = 'E2YUXO4I47OT3F'
+
+        // Copy exact CloudFront domain from AWS
+        CLOUDFRONT_DOMAIN = 'YOUR_CLOUDFRONT_DOMAIN'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Harbor Login') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'harbor-creds',
+                        usernameVariable: 'HARBOR_USER',
+                        passwordVariable: 'HARBOR_PASS'
+                    )
+                ]) {
+                    sh '''
+                        echo "$HARBOR_PASS" | sudo nerdctl login \
+                        --insecure-registry \
+                        $HARBOR \
+                        -u "$HARBOR_USER" \
+                        --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Build & Push Images') {
+            steps {
+                sh '''
+                    set -e
+
+                    TAG=$BUILD_NUMBER
+
+                    API_DIR=$(find backend -maxdepth 1 -type d -name "api-gateway*" | head -1)
+                    AUTH_DIR=$(find backend -maxdepth 1 -type d -name "auth-service*" | head -1)
+
+                    sudo nerdctl build -t $HARBOR/$PROJECT/api-gateway:$TAG "$API_DIR"
+                    sudo nerdctl build -t $HARBOR/$PROJECT/auth-service:$TAG "$AUTH_DIR"
+                    sudo nerdctl build -t $HARBOR/$PROJECT/task-service:$TAG backend/task-service
+                    sudo nerdctl build -t $HARBOR/$PROJECT/notification-service:$TAG backend/notification-service
+                    sudo nerdctl build -t $HARBOR/$PROJECT/report-service:$TAG backend/report-service
+
+                    for SERVICE in api-gateway auth-service task-service notification-service report-service
+                    do
+                        sudo nerdctl push \
+                        --insecure-registry \
+                        $HARBOR/$PROJECT/$SERVICE:$TAG
+                    done
+                '''
+            }
+        }
+
+        stage('Deploy Kubernetes') {
+            steps {
+                sh '''
+                    TAG=$BUILD_NUMBER
+
+                    kubectl set image deployment/api-gateway \
+                    api-gateway=$HARBOR/$PROJECT/api-gateway:$TAG \
+                    -n $NAMESPACE
+
+                    kubectl set image deployment/auth-service \
+                    auth-service=$HARBOR/$PROJECT/auth-service:$TAG \
+                    -n $NAMESPACE
+
+                    kubectl set image deployment/task-service \
+                    task-service=$HARBOR/$PROJECT/task-service:$TAG \
+                    -n $NAMESPACE
+
+                    kubectl set image deployment/notification-service \
+                    notification-service=$HARBOR/$PROJECT/notification-service:$TAG \
+                    -n $NAMESPACE
+
+                    kubectl set image deployment/report-service \
+                    report-service=$HARBOR/$PROJECT/report-service:$TAG \
+                    -n $NAMESPACE
+
+                    kubectl rollout status deployment/api-gateway -n $NAMESPACE --timeout=180s
+                    kubectl rollout status deployment/auth-service -n $NAMESPACE --timeout=180s
+                    kubectl rollout status deployment/task-service -n $NAMESPACE --timeout=180s
+                    kubectl rollout status deployment/notification-service -n $NAMESPACE --timeout=180s
+                    kubectl rollout status deployment/report-service -n $NAMESPACE --timeout=180s
+                '''
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                        npm install
+
+                        VITE_API_URL=https://$CLOUDFRONT_DOMAIN \
+                        npm run build
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Frontend') {
+            steps {
+                sh '''
+                    aws s3 sync frontend/dist/ s3://$S3_BUCKET/ --delete
+
+                    aws cloudfront create-invalidation \
+                    --distribution-id $CLOUDFRONT_ID \
+                    --paths "/*"
+                '''
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                sh '''
+                    kubectl get pods -n $NAMESPACE
+
+                    curl --fail http://localhost:30080/health
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment Successful!'
+        }
+
+        failure {
+            echo 'Deployment Failed!'
+            sh 'kubectl get pods -n $NAMESPACE || true'
+        }
+    }
+}
